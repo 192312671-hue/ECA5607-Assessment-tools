@@ -1,0 +1,114 @@
+clc;
+clear;
+close all;
+
+%% Simulation Parameters
+numUsers = 30;
+totalBandwidth = 100;      % MHz
+totalResources = 100;      % Resource Blocks
+
+% User Priority (1 = Low, 2 = Medium, 3 = High)
+priority = randi([1 3], numUsers, 1);
+
+% Random Bandwidth Demand
+bandwidthDemand = randi([2 10], numUsers, 1);
+
+% Random Channel Quality (0.5 to 1.5)
+channelQuality = 0.5 + rand(numUsers,1);
+
+%% Bandwidth Allocation Based on Priority
+
+allocatedBandwidth = zeros(numUsers,1);
+
+weights = priority ./ sum(priority);
+
+allocatedBandwidth = weights * totalBandwidth;
+
+% Ensure allocation does not exceed demand
+allocatedBandwidth = min(allocatedBandwidth, bandwidthDemand);
+
+%% Throughput Calculation
+
+% Shannon Approximation
+SNR = 10;
+
+throughput = allocatedBandwidth .* log2(1 + SNR .* channelQuality);
+
+%% Latency Calculation
+
+baseLatency = 50;      % ms
+
+latency = baseLatency ./ (priority .* channelQuality);
+
+%% Resource Utilization
+
+resourceAllocation = (allocatedBandwidth/sum(allocatedBandwidth))*totalResources;
+
+resourceUtilization = sum(resourceAllocation)/totalResources * 100;
+
+%% Slice Classification
+
+sliceType = strings(numUsers,1);
+
+for i=1:numUsers
+
+    if priority(i)==3
+        sliceType(i)="URLLC";
+    elseif priority(i)==2
+        sliceType(i)="eMBB";
+    else
+        sliceType(i)="mMTC";
+    end
+
+end
+
+%% Display Results
+
+T = table((1:numUsers)',sliceType,priority,...
+    bandwidthDemand,allocatedBandwidth,...
+    throughput,latency,...
+    resourceAllocation);
+
+disp(T)
+
+fprintf("\nOverall Resource Utilization = %.2f %%\n",resourceUtilization);
+
+%% Graph 1: Bandwidth Allocation
+
+figure;
+bar(allocatedBandwidth)
+xlabel('Users')
+ylabel('Allocated Bandwidth (MHz)')
+title('Bandwidth Allocation')
+
+%% Graph 2: Throughput
+
+figure;
+bar(throughput)
+xlabel('Users')
+ylabel('Throughput (Mbps)')
+title('User Throughput')
+
+%% Graph 3: Latency
+
+figure;
+plot(latency,'r-o','LineWidth',2)
+grid on
+xlabel('Users')
+ylabel('Latency (ms)')
+title('Latency')
+
+%% Graph 4: Resource Allocation
+
+figure;
+pie([resourceUtilization 100-resourceUtilization])
+legend('Used','Unused')
+title('Resource Utilization')
+
+%% Graph 5: Priority Distribution
+
+figure;
+histogram(priority,3)
+xlabel('Priority')
+ylabel('Number of Users')
+title('User Priority Distribution')
